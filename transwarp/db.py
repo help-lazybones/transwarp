@@ -157,16 +157,13 @@ class _Connection(object):
     '''
     def __enter__(self):
         global _db_ctx
-        self.should_cleanup = False
         if _db_ctx.connection is None:
             _db_ctx.init()
-            self.should_cleanup = True
         return self
 
     def __exit__(self, exctype, excvalue, traceback):
         global _db_ctx
-        if self.should_cleanup:
-            _db_ctx.cleanup()
+        _db_ctx.cleanup()
 
 def connection():
     '''
@@ -203,6 +200,8 @@ class _Transaction(object):
 
     def __enter__(self):
         global _db_ctx
+        if not _db_ctx.connection:
+            _db_ctx.init()
         _db_ctx.transactions = _db_ctx.transactions + 1
         _log('begin transaction...' if _db_ctx.transactions==1 else 'join current transaction...')
         return self
@@ -242,8 +241,7 @@ def transaction():
         pass
     '''
     # make sure a transaction is associated a valid connection:
-    with _Connection():
-        return _Transaction()
+    return _Transaction()
 
 def with_transaction(func):
     '''
